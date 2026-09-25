@@ -1,0 +1,42 @@
+# PLAYTEST LOG — demos GAN loop, round 1
+
+Date: 2026-09-26 · Lane: direct (subagent spawn gateway down) · Branch: `demos/gan-round-1`
+
+## Round 1 — adversarial playtest of the live page (pre-change)
+
+Inventory: one self-contained `index.html` (467KB), four demos on a mini reactive
+Sheet engine (`Bus`/`Sheet`/`makeLog`), all internals closed per-demo IIFEs.
+
+| Demo | Has controls | Reset | ML feed | Rewind | Findings |
+|------|-------------|-------|---------|--------|----------|
+| ocean | flow, speed, drop | ✗ | ✗ (has surge listener log) | ✗ | engine is honest damped-wave; no way to flatten sea without reload |
+| reversi | pause, speed | ✗ | ✗ (weights drift invisibly at game end) | ✗ | **the flagship gap** — Casey asked for reset+feed+rewind; zero of three |
+| hold'em | next, new, auto | partial (`new` re-deals, persona never resets) | ✗ | ✗ | opponent persona drifts; no visible read of drift |
+| desk | run, quantum, retape | ✗ | ✗ | ✗ | (wired in round 2+; not touched this round) |
+
+Verdict round 1: the engines are real (stone drops re-evaluate 336 cells, weight
+maps drift with clamped per-square updates) but the *learning* is invisible —
+no per-round explanation, no way back, no way to restart.
+
+## Round 2 — build + adversarial verify
+
+Shipped `window.Lab` (shared chrome): per-demo control bar (⟲ reset + scrub
+slider), LEARNING FEED panel (last 40 lines, honest renderers only), 200-event
+history ring, 200-frame weight film for reversi.
+
+- reversi: `endGame` now emits `{game, result, tideWon, meanDrift, topSquare,
+  topDelta, wm}` + film frame. Reset restores START_W / fresh board / counters.
+  Scrub paints recorded weight maps onto the live canvas ("film · game N").
+- ocean: emits stone + surge events; reset flattens `h`/`hp`, clears log+gauge.
+- Verification: all 5 script blocks pass `node --check`; Lab smoke test in a
+  fake-DOM harness passes (feed text exact, bucket bug found & fixed — resets
+  initially landed in their own history bucket).
+
+## Round 3 — residual gaps (the next adversarial pass)
+
+1. hold'em/desk not yet wired — bar appears, reset button honestly says
+   "not wired for soft-reset yet (round 2); reload the page for a full reset".
+2. Rewind for reversi paints the weight film but does not restore board states
+   (film is weight-map-only by design — board snapshots would need deeper hooks).
+3. Feature-link ask (demos page as top feature on superinstance.ai / .dev) is
+   front-site work, tracked in the PR body — not this repo.
