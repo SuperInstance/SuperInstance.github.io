@@ -749,6 +749,118 @@ function compact(v) {
 
 </script>
 <script>
+/* ============ LAB — shared reset / learning-feed / rewind chrome ============
+   Round 1 of the demos GAN loop. Honest by construction: the feed only renders
+   events the engines themselves emit via Lab.emit; rewind only replays history
+   the page actually recorded. If a demo hasn't been wired yet, its bar says so. */
+(function () {
+  const CAP = 200;
+  const state = new Map(); // demo -> { events: [], film: [], wired: bool }
+
+  function demoState(demo) {
+    if (!state.has(demo)) state.set(demo, { events: [], film: [], wired: false });
+    return state.get(demo);
+  }
+
+  function el(tag, cls, parent, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+
+  // plain-language renderers per event type — the "what changed each round" feed
+  const RENDER = {
+    'reversi': (d, e) => {
+      const t = e.tideWon ? 'TIDE' : 'TERRA';
+      const drift = e.meanDrift != null ? ` · weight map shifted ${(e.meanDrift * 100).toFixed(1)}% (mean |Δw| ${e.meanDrift.toFixed(3)})` : '';
+      const top = e.topSquare ? ` · biggest move: square ${e.topSquare} (${e.topDelta > 0 ? '+' : ''}${e.topDelta.toFixed(2)})` : '';
+      return `game ${e.game} · ${t} wins ${e.result} → loser's cells absorb the lesson${drift}${top} · TERRA flips ${e.wm.flips.toFixed(2)} / mobility ${e.wm.mobility.toFixed(2)}`;
+    },
+    'reversi-reset': () => '⟲ reset — TIDE back to the opening book, TERRA to flips 2.2 / mobility 1.5 · history kept below',
+    'ocean': (d, e) => `${e.kind === 'stone' ? 'stone' : 'surge'} — ${e.detail}`,
+    'ocean-reset': () => '⟲ reset — sea flattened, gauge quiet, feed cleared',
+    'unwired': (d, e) => e,
+  };
+
+  // 'reversi-reset' etc. belong to the parent demo's history, not a new bucket
+  function bucket(demo) { return demo.endsWith('-reset') ? demo.slice(0, -6) : demo; }
+
+  function feedLine(demo, ev) {
+    const d = demoState(bucket(demo));
+    const render = RENDER[demo] || RENDER.unwired;
+    const line = { t: new Date(), text: render(demo, ev) };
+    d.events.push(line);
+    if (d.events.length > CAP) d.events.shift();
+    const feed = document.querySelector(`#p-${demo} .labFeedLines`);
+    if (feed) {
+      const div = el('div', 'labLine', feed, `[${line.t.toLocaleTimeString()}] ${line.text}`);
+      feed.prepend(div);
+      while (feed.children.length > 40) feed.lastChild.remove();
+    }
+    const count = document.querySelector(`#p-${demo} .labCount`);
+    if (count) count.textContent = `${d.events.length} event${d.events.length === 1 ? '' : 's'}`;
+    const scrub = document.querySelector(`#p-${demo} .labScrub`);
+    if (scrub) { scrub.max = Math.max(0, d.events.length - 1); if (!scrub.matches(':active')) scrub.value = d.events.length - 1; }
+  }
+
+  function bar(patchId, demo, opts) {
+    const patch = document.getElementById(patchId);
+    if (!patch) return;
+    const controls = patch.querySelector('.controls');
+    const feedMount = patch.querySelector('.miniLog');
+    // ── control bar: reset + scrub
+    const barEl = el('div', 'labBar', controls.parentElement); // sits under the side panel stack
+    controls.parentElement.insertBefore(barEl, feedMount);
+    const resetBtn = el('button', 'chip', barEl, '⟲ reset');
+    const scrub = el('input', 'labScrub', barEl);
+    scrub.type = 'range'; scrub.min = 0; scrub.max = 0; scrub.value = 0; scrub.style.width = '120px';
+    const readout = el('span', 'fadeNote labReadout', barEl, '—');
+    resetBtn.onclick = () => {
+      if (patch.__reset) { patch.__reset(); }
+      else feedLine(demo, `reset requested — this demo isn't wired for soft-reset yet (round 2); reload the page for a full reset`);
+    };
+    scrub.oninput = () => {
+      const d = demoState(demo);
+      const i = +scrub.value;
+      const ev = d.events[i];
+      readout.textContent = ev ? `#${i + 1}/${d.events.length} · ${ev.text.slice(0, 72)}` : '—';
+      if (patch.__scrub) patch.__scrub(i, d);
+    };
+    // ── feed panel
+    const feed = el('div', 'labFeed', feedMount.parentElement);
+    feedMount.parentElement.insertBefore(feed, feedMount.nextSibling);
+    const head = el('div', 'labHead', feed);
+    el('span', 'labTitle', head, 'LEARNING FEED');
+    el('span', 'fadeNote labCount', head, '0 events');
+    el('div', 'labFeedLines', feed);
+    const style = document.createElement('style');
+    style.textContent = `
+      .labBar{display:flex;gap:10px;align-items:center;margin:10px 0;flex-wrap:wrap}
+      .labFeed{border:1px solid var(--line,#1d3a46);border-radius:8px;padding:10px 12px;margin:10px 0;background:rgba(10,17,32,.5)}
+      .labHead{display:flex;justify-content:space-between;margin-bottom:6px}
+      .labTitle{font-family:ui-monospace,monospace;font-size:.66rem;letter-spacing:.25em;color:#4CF2D8}
+      .labFeedLines{max-height:140px;overflow:auto;font-family:ui-monospace,monospace;font-size:.72rem;line-height:1.5;color:#9db8b2}
+      .labLine{padding:2px 0;border-bottom:1px dashed rgba(255,255,255,.06)}
+      .labReadout{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      input.labScrub{accent-color:#4CF2D8}`;
+    document.head.appendChild(style);
+  }
+
+  window.Lab = {
+    emit(demo, ev) { feedLine(demo, ev); },
+    bar,
+    film(demo, frame) { // weighted-snapshot film for rewind (reversi)
+      const d = demoState(demo);
+      d.film.push(frame);
+      if (d.film.length > CAP) d.film.shift();
+    },
+    state: demoState,
+  };
+})();
+</script>
+<script>
 /* ============ DEMO 01 — Ocean-as-a-Sheet ============ */
 (function () {
   const COLS = 24, ROWS = 14, N = COLS * ROWS;
@@ -768,6 +880,7 @@ function compact(v) {
     if (Math.abs(v) > 0.55 && now - lastSurge > 1400) {
       lastSurge = now;
       log(`<b>listener</b> · <span class="sig">tide.gauge |h| ${Math.abs(v).toFixed(2)} crossed the surge line → foam lit</span>`);
+      if (window.Lab) Lab.emit('ocean', { kind: 'surge', detail: `tide.gauge |h| ${Math.abs(v).toFixed(2)} crossed 0.55 — the LISTENER lit the foam` });
     }
   });
 
@@ -775,6 +888,7 @@ function compact(v) {
   function drop(x, y, amp) {
     h[idx(x, y)] += amp; hp[idx(x, y)] -= amp * 0.45;
     log(`stone dropped at (${x},${y}) · amp ${amp.toFixed(1)}`);
+    if (window.Lab) Lab.emit('ocean', { kind: 'stone', detail: `(${x},${y}) amp ${amp.toFixed(1)} — 336 cells re-evaluate the wave formula` });
   }
   document.getElementById('oceanDrop').onclick = () =>
     drop(2 + Math.floor(Math.random() * (COLS - 4)), 2 + Math.floor(Math.random() * (ROWS - 4)), 1.4 * (Math.random() > .5 ? 1 : -1));
@@ -832,6 +946,17 @@ function compact(v) {
   setInterval(() => { const g = S.get('tide.gauge'); if (typeof g === 'number') document.getElementById('oceanGauge').textContent = `h = ${g.toFixed(2)} · cell D7`; }, 120);
   drop(6, 4, 1.6); drop(18, 9, -1.3);
   requestAnimationFrame(loop);
+  if (window.Lab) {
+    const patch = document.getElementById('p-ocean');
+    Lab.bar('p-ocean', 'ocean');
+    patch.__reset = () => {
+      h.fill(0); hp.fill(0); frame = 0; lastLog = 0;
+      document.getElementById('oceanLog').innerHTML = '';
+      document.getElementById('oceanGauge').textContent = 'h = 0.00';
+      render();
+      Lab.emit('ocean-reset', {});
+    };
+  }
 })();
 
 /* ============ DEMO 02 — Reversi, self-playing ============ */
@@ -944,7 +1069,8 @@ function compact(v) {
     lastResult = `${pick.tide} — ${pick.terra}`;
     const tideWon = pick.tide > pick.terra;
     // ── the learning loop: TIDE's weight cells drift toward whatever the winner occupied
-    const w = S.get('tide.wpos').slice(), b = S.get('board');
+    const wBefore = S.get('tide.wpos').slice();
+    const w = wBefore.slice(), b = S.get('board');
     const winner = tideWon ? 1 : 2;
     for (let i = 0; i < 64; i++) {
       w[i] = w[i] * 0.985 + (b[i] === winner ? 1.1 : b[i] === 3 - winner ? -0.5 : 0);
@@ -955,6 +1081,20 @@ function compact(v) {
     if (!tideWon) wm.flips = Math.min(4, wm.flips + 0.08); else wm.mobility = Math.min(2.6, wm.mobility + 0.08);
     S.cell('terra.wmob', wm, { silent: true });
     drawWeights();
+    if (window.Lab) {
+      let driftSum = 0, topI = -1, topD = 0;
+      for (let i = 0; i < 64; i++) {
+        const dv = Math.abs(w[i] - wBefore[i]);
+        driftSum += dv;
+        if (dv > Math.abs(topD)) { topD = w[i] - wBefore[i]; topI = i; }
+      }
+      Lab.emit('reversi', {
+        game: games, result: lastResult, tideWon, wm: { ...wm },
+        meanDrift: driftSum / 64,
+        topSquare: topI >= 0 ? name(topI) : null, topDelta: topD,
+      });
+      Lab.film('reversi', { game: games, w: w.slice(), result: lastResult });
+    }
     log(`<span class="sig">GAME ${games} · TIDE ${pick.tide} — ${pick.terra} TERRA · the loser's weight cells absorb the lesson</span>`);
     setTimeout(() => {
       S.cell('board', freshBoard(), { silent: true });
@@ -972,6 +1112,38 @@ function compact(v) {
     if (!paused && pending) { const p = pending; pending = null; schedule(p); }
   };
 
+  if (window.Lab) {
+    Lab.bar('p-reversi', 'reversi');
+    const patch = document.getElementById('p-reversi');
+    patch.__reset = () => {
+      S.cell('tide.wpos', START_W.slice(), { silent: true });
+      S.cell('terra.wmob', { flips: 2.2, mobility: 1.5, jitter: 1.2 }, { silent: true });
+      S.cell('board', freshBoard(), { silent: true });
+      S.cell('turn', 1, { silent: true });
+      S.cell('seq', 0, { silent: true });
+      appliedSeq = 0; games = 0; lastIdx = -1; endLock = false; lastResult = '—';
+      schedToken++; pending = null;
+      drawWeights(); render();
+      Lab.emit('reversi-reset', {});
+    };
+    patch.__scrub = (i, d) => {
+      const f = d.film[i];
+      if (!f) return;
+      // paint the recorded weight map so you can watch the learning walk backwards
+      let mn = 1e9, mx = -1e9; f.w.forEach(v => { mn = Math.min(mn, v); mx = Math.max(mx, v); });
+      const span = Math.max(1e-6, mx - mn), cell = wcv.width / 8;
+      wctx.fillStyle = '#0a1120'; wctx.fillRect(0, 0, wcv.width, wcv.height);
+      for (let i = 0; i < 64; i++) {
+        const t = (f.w[i] - mn) / span;
+        wctx.fillStyle = `rgba(${Math.round(20 + t * 43)},${Math.round(30 + t * 194)},${Math.round(46 + t * 151)},${0.25 + t * 0.75})`;
+        wctx.beginPath();
+        wctx.roundRect((i % 8) * cell + 1.5, Math.floor(i / 8) * cell + 1.5, cell - 3, cell - 3, 4);
+        wctx.fill();
+      }
+      wctx.fillStyle = '#9db8b2'; wctx.font = '12px ui-monospace';
+      wctx.fillText(`film · game ${f.game} · ${f.result}`, 8, wcv.height - 8);
+    };
+  }
   // ── rendering
   const boardEl = document.getElementById('reversiBoard');
   const squares = [];
