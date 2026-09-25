@@ -211,6 +211,7 @@ input[type=range]{accent-color:var(--tide);cursor:pointer}
 /* ---------- ecosystem ---------- */
 .quiltGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media(max-width:900px){.quiltGrid{grid-template-columns:1fr}}
+.quiltCardWrap{display:block;text-decoration:none;color:inherit}
 .quiltCard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;position:relative;overflow:hidden}
 .quiltCard:hover{border-color:rgba(63,224,197,.35)}
 .quiltCard .seam{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(63,224,197,.5),transparent)}
@@ -592,12 +593,12 @@ header::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:non
       <div class="cap"><b>Six patches, one seam.</b> Each project stitched to the same reactive cloth — vendored engine, zero forks after patch 12.</div>
     </div>
     <div class="quiltGrid">
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 01 · INVESTIGATION</div><h4>quilt-playtest</h4><p>12 engine patches, an 11-probe dissent ledger, gesture math, federation — the engine learned to be trusted.</p><span class="pill">36/36 upstream tests kept green</span></div>
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 02 · PRODUCTION</div><h4>quilt-tools</h4><p>Ten tools in ten realms — pagers, ledgers, memory, triage, budgets — proving the template ships real software.</p><span class="pill">75/75 checks</span></div>
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 03 · PLAY</div><h4>quilt-arcade</h4><p>Five games as spreadsheets — reversi, gomoku, hold'em — rules as cells, flip cascades, visible learning loops.</p><span class="pill">55/55 checks</span></div>
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 04 · MARKETS</div><h4>quilt-quant</h4><p>The trading desk as a sheet: one value push re-prices everything; improvement only through an out-of-sample gate.</p><span class="pill">15/15 checks vs reference stack</span></div>
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 05 · AGENCY</div><h4>quilt-quant / lab</h4><p>The sheet IS the agent — simulation-first, signal-as-confirmation, entanglement veto, pruning by participation.</p><span class="pill">19/19 · live QRNG + GLM</span></div>
-      <div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 06 · COMPETITION</div><h4>quilt-arena</h4><p>Four rival minds play minesweeper &amp; hearts, infer each other's formulas, under a rationed quantum perception budget.</p><span class="pill">23/23 · live championship</span></div>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-playtest" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 01 · INVESTIGATION</div><h4>quilt-playtest</h4><p>12 engine patches, an 11-probe dissent ledger, gesture math, federation — the engine learned to be trusted.</p><span class="pill">36/36 upstream tests kept green</span></div></a>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-tools" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 02 · PRODUCTION</div><h4>quilt-tools</h4><p>Ten tools in ten realms — pagers, ledgers, memory, triage, budgets — proving the template ships real software.</p><span class="pill">75/75 checks</span></div></a>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-arcade" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 03 · PLAY</div><h4>quilt-arcade</h4><p>Five games as spreadsheets — reversi, gomoku, hold'em — rules as cells, flip cascades, visible learning loops.</p><span class="pill">55/55 checks</span></div></a>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-quant" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 04 · MARKETS</div><h4>quilt-quant</h4><p>The trading desk as a sheet: one value push re-prices everything; improvement only through an out-of-sample gate.</p><span class="pill">15/15 checks vs reference stack</span></div></a>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-quant" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 05 · AGENCY</div><h4>quilt-quant / lab</h4><p>The sheet IS the agent — simulation-first, signal-as-confirmation, entanglement veto, pruning by participation.</p><span class="pill">19/19 · live QRNG + GLM</span></div></a>
+      <a class="quiltCardWrap" href="https://github.com/SuperInstance/quilt-arena" target="_blank" rel="noopener"><div class="quiltCard"><div class="seam"></div><div class="qn">PATCH 06 · COMPETITION</div><h4>quilt-arena</h4><p>Four rival minds play minesweeper &amp; hearts, infer each other's formulas, under a rationed quantum perception budget.</p><span class="pill">23/23 · live championship</span></div></a>
     </div>
   </div>
 </section>
@@ -796,6 +797,10 @@ function compact(v) {
       return `game ${e.game} · ${t} wins ${e.result} → loser's cells absorb the lesson${drift}${top} · TERRA flips ${e.wm.flips.toFixed(2)} / mobility ${e.wm.mobility.toFixed(2)}`;
     },
     'reversi-reset': () => '⟲ reset — TIDE back to the opening book, TERRA to flips 2.2 / mobility 1.5 · history kept below',
+    'holdem-reset': () => '⟲ reset — OPP re-dealt a fresh persona, reads zeroed, hand 1 · history kept below',
+    'desk-reset': () => '⟲ reset — original tape restored (seed 4242), equity/budget/trades zeroed · history kept below',
+    'holdem': (d, e) => `hand ${e.hand} · ${e.how}${e.n ? ` · final shape loose ${e.loose.toFixed(2)} / aggr ${e.aggr.toFixed(2)} (n=${e.n})` : ' · no reads taken'}`,
+    'desk': (d, e) => e,
     'ocean': (d, e) => `${e.kind === 'stone' ? 'stone' : 'surge'} — ${e.detail}`,
     'ocean-reset': () => '⟲ reset — sea flattened, gauge quiet, feed cleared',
     'unwired': (d, e) => e,
@@ -845,6 +850,7 @@ function compact(v) {
       readout.textContent = ev ? `#${i + 1}/${d.events.length} · ${ev.text.slice(0, 72)}` : '—';
       if (patch.__scrub) patch.__scrub(i, d);
     };
+    scrub.onchange = () => { if (patch.__scrubEnd) patch.__scrubEnd(); };
     // ── feed panel
     const feed = el('div', 'labFeed', feedMount.parentElement);
     feedMount.parentElement.insertBefore(feed, feedMount.nextSibling);
@@ -1110,7 +1116,7 @@ function compact(v) {
         meanDrift: driftSum / 64,
         topSquare: topI >= 0 ? name(topI) : null, topDelta: topD,
       });
-      Lab.film('reversi', { game: games, w: w.slice(), result: lastResult });
+      Lab.film('reversi', { game: games, w: w.slice(), result: lastResult, b: S.get('board').slice() });
     }
     log(`<span class="sig">GAME ${games} · TIDE ${pick.tide} — ${pick.terra} TERRA · the loser's weight cells absorb the lesson</span>`);
     setTimeout(() => {
@@ -1158,8 +1164,19 @@ function compact(v) {
         wctx.fill();
       }
       wctx.fillStyle = '#9db8b2'; wctx.font = '12px ui-monospace';
-      wctx.fillText(`film · game ${f.game} · ${f.result}`, 8, wcv.height - 8);
+      wctx.fillText(`film · game ${f.game} · ${f.result} · board as dealt`, 8, wcv.height - 8);
+      // paint the recorded terminal board onto the live squares — the
+      // rewind now shows WHAT WAS PLAYED, not just how the weights moved
+      if (f.b) for (let i = 0; i < 64; i++) {
+        const sq = squares[i], v = f.b[i];
+        sq.className = 'sq';
+        let disc = sq.querySelector('.disc');
+        if (v && !disc) { disc = document.createElement('div'); sq.appendChild(disc); }
+        if (!v && disc) disc.remove();
+        if (v) disc.className = 'disc ' + (v === 1 ? 'B' : 'W');
+      }
     };
+    patch.__scrubEnd = () => render(); // hand the squares back to the live game
   }
   // ── rendering
   const boardEl = document.getElementById('reversiBoard');
@@ -1371,6 +1388,9 @@ function compact(v) {
       if (won) S.cell('pot', 0, { silent: true });
     }
     log(`hand ${S.get('hand')} closed · ${sh ? `final shape: loose ${sh.loose.toFixed(2)} aggr ${sh.aggr.toFixed(2)} decep ${sh.deception.toFixed(2)} (n=${sh.n})` : 'no reads'}`);
+    if (window.Lab) Lab.emit('holdem', sh
+      ? { hand: S.get('hand'), how, loose: sh.loose, aggr: sh.aggr, n: sh.n }
+      : { hand: S.get('hand'), how, n: 0 });
     $('heNext').disabled = true;
   }
   function newHand(first) {
@@ -1394,6 +1414,18 @@ function compact(v) {
   }
   $('heNext').onclick = () => oppAct(STREETS[Math.min(3, S.get('street'))]);
   $('heHand').onclick = () => { newHand(false); };
+  if (window.Lab) {
+    Lab.bar('p-holdem', 'holdem');
+    const patch = document.getElementById('p-holdem');
+    patch.__reset = () => {
+      if (auto) { clearInterval(auto); auto = null; $('heAuto').textContent = '▶ auto'; $('heAuto').classList.remove('on'); }
+      persona.loose = 0.35 + rnd() * 0.4; persona.aggr = 0.3 + rnd() * 0.5;
+      persona.bluff = rnd() * 0.5; persona.strength = rnd();
+      S.cell('hand', 0, { silent: true });
+      newHand(true);
+      Lab.emit('holdem-reset', {});
+    };
+  }
   $('heAuto').onclick = function () {
     if (auto) { clearInterval(auto); auto = null; this.textContent = '▶ auto'; this.classList.remove('on'); return; }
     this.textContent = '⏸ auto'; this.classList.add('on');
@@ -1450,10 +1482,10 @@ function compact(v) {
       if (!S.get('confirm')) { log(`signal <b>long</b> proposed · <span style="color:var(--dim)">confirm gate not satisfied yet — standing by</span>`); return; }
       if (requireQuantum) {
         const used = S.get('moth.used');
-        if (used >= BUDGET) { log(`<span class="amber">moth.budget exhausted — perception unavailable, entry refused</span>`); return; }
+        if (used >= BUDGET) { log(`<span class="amber">moth.budget exhausted — perception unavailable, entry refused</span>`); if (window.Lab) Lab.emit('desk', `budget exhausted — entry refused`); return; }
         const draw = quantum[qPtr++ % quantum.length];
         S.cell('moth.used', used + 1, { silent: true });
-        if (draw < 0.32) { log(`quantum dice <b class="violet">${draw.toFixed(2)}</b> &lt; gate 0.32 · <span class="sig">entry refused — the tape argued back (call #${used + 1})</span>`); return; }
+        if (draw < 0.32) { log(`quantum dice <b class="violet">${draw.toFixed(2)}</b> &lt; gate 0.32 · <span class="sig">entry refused — the tape argued back (call #${used + 1})</span>`); if (window.Lab) Lab.emit('desk', `quantum ${draw.toFixed(2)} < gate — entry refused (call #${used + 1}/${BUDGET})`); return; }
         log(`quantum dice <b class="violet">${draw.toFixed(2)}</b> ≥ gate · <b class="violet">entry validated (call #${used + 1} of ${BUDGET})</b>`);
       }
       S.cell('position', 'long', { silent: true });
@@ -1466,6 +1498,7 @@ function compact(v) {
       S.cell('trades', S.get('trades') + 1, { silent: true });
       marker.push({ i, type: 'out', pnl });
       log(`<span class="sig">EXIT @ ${px[i].toFixed(2)} · trade ${pnl >= 0 ? '+' : ''}${(pnl * 100).toFixed(1)}%</span>`);
+      if (window.Lab) Lab.emit('desk', `EXIT @ ${px[i].toFixed(2)} · trade ${pnl >= 0 ? '+' : ''}${(pnl * 100).toFixed(1)}%`);
     }
   });
 
@@ -1493,6 +1526,7 @@ function compact(v) {
   function finish() {
     const t = S.get('trades'), u = S.get('moth.used');
     log(`<span class="amber">tape complete · strategy ${eq.toFixed(3)} vs buy&amp;hold ${(px[BARS - 1] / px[0]).toFixed(3)} · ${t} trades · ${u} perception calls spent</span>`);
+    if (window.Lab) Lab.emit('desk', `tape complete · strategy ${eq.toFixed(3)} vs buy&hold ${(px[BARS - 1] / px[0]).toFixed(3)} · ${t} trades · ${u} calls`);
     log(`re-tape for a fresh regime — the desk never sees the same tape twice`);
   }
   function updateCells() {
@@ -1573,6 +1607,21 @@ function compact(v) {
     this.textContent = playing ? '⏸ running' : '▶ run';
     this.classList.toggle('on', playing);
   };
+  if (window.Lab) {
+    Lab.bar('p-desk', 'desk');
+    const patch = document.getElementById('p-desk');
+    // soft reset replays the ORIGINAL tape: same seed → same prices → same
+    // doctrine decisions. Determinism is the receipt.
+    patch.__reset = () => {
+      seed = 4242; makeTape();
+      i = 0; eq = 1; eqSeries = []; bnhSeries = []; dd = 0; peak = 1; path = [];
+      e12 = e26 = null; hist = []; marker = []; done = false; qPtr = 0;
+      S.cell('position', 'flat', { silent: true }); S.cell('trades', 0, { silent: true });
+      S.cell('moth.used', 0, { silent: true });
+      Lab.emit('desk-reset', {});
+      render(); updateCells();
+    };
+  }
   $('deskRetape').onclick = () => {
     seed = 1000 + Math.floor(Math.random() * 100000); makeTape();
     i = 0; eq = 1; eqSeries = []; bnhSeries = []; dd = 0; peak = 1; path = [];
