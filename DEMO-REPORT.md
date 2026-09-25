@@ -1,41 +1,40 @@
-# DEMO-REPORT — demos GAN loop, round 1
+# DEMO-REPORT — demos GAN loop, round 2
 
-**Repo:** SuperInstance/superinstance.github.io · **Branch:** `demos/gan-round-1` · **Date:** 2026-09-26
+**Repo:** SuperInstance/superinstance.github.io · **Branch:** `demos/gan-round-2` · **Date:** 2026-09-26
 
-## What Casey asked
-1. RESET buttons on all games/demos.
-2. An ML loop with a LIVE FEED explaining what changes each round.
-3. REWIND control to watch the ML improve.
-4. Same for all games/demos (iterated GAN playtest loop).
-5. Demos page as a top feature link on superinstance.ai and superinstance.dev.
+## What round 2 ships (this PR)
+Round 1 merged (PR #1) with the Lab chrome + reversi flagship. This round closes
+every residual gap round 1 honestly deferred:
 
-## What round 1 ships (this PR)
-- **`window.Lab`** — shared lab chrome: control bar (⟲ reset + scrub slider) and a
-  LEARNING FEED panel per demo. Feed renders ONLY engine-emitted events
-  (`Lab.emit`); no synthetic lines. 200-event ring buffer.
-- **Reversi (flagship, fully wired):**
-  - Per-game learning feed: `game N · WINNER wins A — B → loser's cells absorb the
-    lesson · weight map shifted X% (mean |Δw|) · biggest move: square h1 (−0.90) ·
-    TERRA flips 2.28 / mobility 1.58`. Every number measured from the actual
-    pre/post weight arrays.
-  - ⟲ reset: restores opening weights, fresh board, zero counters.
-  - Rewind film: every game's weight map recorded; scrub the slider to watch the
-    learning walk backwards, frame labeled `film · game N · result`.
-- **Ocean:** stone/surge events in the feed; reset flattens the sea, clears the
-  gauge and console.
-- **Hold'em + desk:** bar + feed panel present; reset button honestly reports
-  "not wired for soft-reset yet (round 2)" instead of faking it. Wiring lands
-  in round 2 (their state closures need per-demo hooks like reversi's).
+1. **Hold'em is fully wired.** Soft-reset stops auto-play, re-deals OPP a fresh
+   persona from the same mulberry(777) stream, zeroes the hand counter, re-deals
+   hole cards. The feed closes every hand: `hand N · <how> · final shape loose
+   x.xx / aggr y.yy (n=…)` — the opponent's drifting read-model is now visible
+   per hand, not just in the miniLog.
+2. **The desk is fully wired.** Soft-reset replays the ORIGINAL tape (seed 4242):
+   same prices, same doctrine decisions — determinism as the receipt. (Distinct
+   from the re-tape button, which spends a fresh seed and KEEPS the spent
+   moth.used budget on purpose.) Feed events: entry validated, quantum-gate
+   refusal, budget exhausted, EXIT with pnl, tape-complete summary.
+3. **Reversi rewind is now board-state, not just weights.** Film frames record
+   the terminal board; scrubbing paints the recorded discs onto the live
+   squares ("film · game N · result · board as dealt"); releasing the scrub
+   hands the squares back via a new `__scrubEnd` hook in the Lab chrome.
+4. **All six PATCH cards link to their repos** (quilt-playtest, quilt-tools,
+   quilt-arcade, quilt-quant ×2, quilt-arena) — the front door now routes to
+   the fleet's GitHub presence.
 
 ## Verification (all green)
-- 5 script blocks pass `node --check`.
-- Lab smoke test (fake-DOM harness): exact feed text, event/film counts, reset
-  bucketing. One real bug found & fixed in this harness pass: `-reset` events
-  originally created separate history buckets.
+- `node tests/lab-smoke.test.mjs` — 23/23. Committed harness, two layers:
+  every `<script>` block parses; structural pins on each wiring claim above
+  (bar mounts, reset bodies, emit sites, film board, scrub-end, six links).
+- All 5 demos now mount `Lab.bar`; none fall through to the honest-unwired
+  message from round 1.
 
-## Honest gaps
-- Rewind is weight-map-only (no board-state film).
-- Feature links on superinstance.ai/.dev = front-site PRs, tracked separately.
-- GAN round 2 continues on hold'em/desk wiring + board-film rewind.
+## Honest residuals
+- Feed history is kept across resets by design (200-event ring; the reset line
+  itself marks the boundary).
+- Hold'em feed grain is per-hand; street grain stays in the miniLog.
+- superinstance.ai / .dev top-nav links remain a front-site owner action.
 
-Playtest trail: `PLAYTEST-LOG.md`.
+Playtest trail: `PLAYTEST-LOG.md` (rounds 1–2).
