@@ -1025,7 +1025,12 @@ function compact(v) {
 
   // ── pick: the FORMULA the whole game hangs on — re-evaluates on every board/turn/weight change
   const rnd = mulberry(20260925);
-  S.def('pick', ['board', 'turn', 'tide.wpos', 'terra.wmob'], (b, turn, wpos, wmob) => {
+  // 'seq' MUST be a declared dep: the formula stamps every pick with S.get('seq')
+  // + 1, and the scheduler gates on `pick.seq > appliedSeq`. Leave seq out of
+  // deps and the cell never re-evaluates on a seq write — the pick goes stale
+  // by exactly one seq, the gate rejects it forever, and the game freezes
+  // (the "only plays one round" bug).
+  S.def('pick', ['board', 'turn', 'seq', 'tide.wpos', 'terra.wmob'], (b, turn, _seq, wpos, wmob) => {
     const seq = S.get('seq') + 1;
     const mine = legals(b, turn);
     if (!mine.length) {
@@ -1065,7 +1070,11 @@ function compact(v) {
       const tk = ++schedToken;
       log(`pass — ${pick.who === 1 ? 'TIDE' : 'TERRA'} has no move`);
       setTimeout(() => {
-        if (tk === schedToken && !paused) { appliedSeq = Math.max(appliedSeq, pick.seq); S.cell('turn', 3 - pick.who, { silent: true }); }
+        // NB: do NOT touch appliedSeq here — a pass doesn't advance the board,
+        // so the pick formula's seq stays seqCell+1; bumping appliedSeq to the
+        // pass's seq would make the very next move (same seq) fail the
+        // `pick.seq > appliedSeq` gate and freeze the game one square short.
+        if (tk === schedToken && !paused) S.cell('turn', 3 - pick.who, { silent: true });
       }, delay());
     } else if (pick.type === 'end') {
       const tk = ++schedToken;
@@ -1118,12 +1127,16 @@ function compact(v) {
       });
       Lab.film('reversi', { game: games, w: w.slice(), result: lastResult, b: S.get('board').slice() });
     }
+    // restart the chain: reset the JS gates BEFORE touching any cell —
+    // silent cell writes still flush the pick watcher synchronously, so
+    // appliedSeq must already be 0 when the fresh pick (seq 1) is scheduled,
+    // else `pick.seq > appliedSeq` rejects it and the game dies after round 1.
+    appliedSeq = 0; lastIdx = -1; endLock = false;
     log(`<span class="sig">GAME ${games} · TIDE ${pick.tide} — ${pick.terra} TERRA · the loser's weight cells absorb the lesson</span>`);
     setTimeout(() => {
       S.cell('board', freshBoard(), { silent: true });
       S.cell('turn', 1, { silent: true });
       S.cell('seq', 0, { silent: true });
-      appliedSeq = 0; lastIdx = -1; endLock = false;
       log(`new deal · weights drifted, board reset`);
       render();
     }, 1600);
@@ -1139,13 +1152,15 @@ function compact(v) {
     Lab.bar('p-reversi', 'reversi');
     const patch = document.getElementById('p-reversi');
     patch.__reset = () => {
+      // gates FIRST — the silent cell writes below flush the pick watcher
+      // synchronously; see endGame's restart for the full race explanation.
+      appliedSeq = 0; games = 0; lastIdx = -1; endLock = false; lastResult = '—';
+      schedToken++; pending = null;
       S.cell('tide.wpos', START_W.slice(), { silent: true });
       S.cell('terra.wmob', { flips: 2.2, mobility: 1.5, jitter: 1.2 }, { silent: true });
       S.cell('board', freshBoard(), { silent: true });
       S.cell('turn', 1, { silent: true });
       S.cell('seq', 0, { silent: true });
-      appliedSeq = 0; games = 0; lastIdx = -1; endLock = false; lastResult = '—';
-      schedToken++; pending = null;
       drawWeights(); render();
       Lab.emit('reversi-reset', {});
     };
